@@ -108,3 +108,12 @@ select, input[type="search"], input[type="text"], input[type="date"], textarea {
 
 .footer { border-top: 1px solid var(--line); padding: 1.25rem 0 2rem; margin-top: 2rem; color: var(--muted); font-size: 0.9rem; }
 .footer a { color: var(--accent); }
+
+/* Lead capture */
+.lead-capture { margin-top: 1.5rem; border-top: 1px solid var(--line); padding-top: 1.25rem; }
+.lead-capture h3 { margin: 0 0 0.25rem; }
+.lead-form { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+.lead-form input { flex: 1 1 200px; padding: 0.6rem 0.75rem; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 0.95rem; }
+.lead-form input:focus { outline: 2px solid #0369a1; outline-offset: 1px; }
+.lead-status { margin-top: 0.75rem; min-height: 1.4em; font-weight: 600; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
