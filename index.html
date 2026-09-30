@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SOC 2 Remediation Plan Generator</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap">
+    <h1>SOC 2 Remediation Plan Generator</h1>
+    <p class="tag">Turn your readiness gaps into a sequenced, owner-assigned remediation plan.</p>
+    <p class="disclaimer">Readiness aid only. Not an audit, attestation, CPA opinion, or legal advice.</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="importPanel" class="card">
+    <h2>1. Load your gaps</h2>
+    <p class="hint">If you used the SOC 2 Readiness Calculator in this browser, your gaps can be imported automatically. Otherwise, pick criteria manually below.</p>
+    <div class="row">
+      <button id="btnImport" class="btn primary">Import gaps from Readiness Calculator</button>
+      <button id="btnClear" class="btn danger ghost">Clear plan</button>
+      <span id="importStatus" class="status" aria-live="polite"></span>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>2. Add criteria to the plan</h2>
+    <div class="row filters">
+      <label>Category
+        <select id="filterCat">
+          <option value="">All categories</option>
+        </select>
+      </label>
+      <label>Priority
+        <select id="filterPri">
+          <option value="">All priorities</option>
+          <option value="critical">Critical</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+        </select>
+      </label>
+      <label class="grow">Search
+        <input id="filterText" type="search" placeholder="e.g. access, vendor, privacy">
+      </label>
+    </div>
+    <div id="criteriaList" class="criteria-list"></div>
+  </section>
+
+  <section class="card">
+    <h2>3. Your remediation plan</h2>
+    <div class="row">
+      <button id="btnAddCustom" class="btn">Add custom action item</button>
+      <button id="btnExportCsv" class="btn">Export CSV</button>
+      <button id="btnExportMd" class="btn">Export Markdown</button>
+    </div>
+    <div class="progress-shell">
+      <div id="progressBar" class="progress-bar"></div>
+    </div>
+    <p id="progressLabel" class="hint"></p>
+    <div id="planList"></div>
+    <p id="emptyPlan" class="hint">No items yet. Import gaps or add criteria above.</p>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <p>Built by <strong>AI Tech Pros</strong>. Dataset: <a href="https://github.com/nehemiah313/tsc-dataset">nehemiah313/tsc-dataset</a></p>
+    <p class="disclaimer">Readiness aid only. Not an audit, attestation, CPA opinion, or legal advice.</p>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
