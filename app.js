@@ -154,9 +154,61 @@ function exportMarkdown(items, criteriaById) {
   return lines.join("\n");
 }
 
+/* ---------------- Lead capture ----------------
+ * Set REPORT_INBOX to the inbox that receives emailed plans. When set, a
+ * "Get your plan reviewed" form appears: the visitor enters their work email
+ * and their plan is posted to FormSubmit, which emails the full plan plus
+ * lead details to REPORT_INBOX. Leave "" to hide the form.
+ *
+ * One-time setup: the first submission triggers a FormSubmit activation
+ * email to REPORT_INBOX. The inbox owner must click the activation link
+ * once; after that, submissions arrive automatically.
+ */
+const REPORT_INBOX = "n.harvard@aitechpros.ai";
+const LEAD_STORE_KEY = "soc2remedlead";
+
+function leadEndpoint(inbox) {
+  return "https://formsubmit.co/ajax/" + encodeURIComponent(inbox);
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+/* Builds the JSON body posted to the lead endpoint. Pure: safe to unit test. */
+function buildLeadPayload(company, visitorEmail, items, criteriaById, report) {
+  const stats = progressStats(items);
+  const critical = items.filter((i) => {
+    const c = i.criterionId ? criteriaById[i.criterionId] : null;
+    return c && c.priority === "critical" && i.status !== "Done";
+  }).length;
+  return {
+    _subject: "SOC 2 Remediation Plan lead" + (company ? " - " + company : ""),
+    _template: "table",
+    name: company || "(no company given)",
+    email: visitorEmail,
+    plan_items: String(stats.total),
+    items_done: String(stats.done),
+    open_critical_items: String(critical),
+    message: report
+  };
+}
+
+function loadLead() {
+  try {
+    const raw = window.localStorage.getItem(LEAD_STORE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+
+function saveLead(lead) {
+  try { window.localStorage.setItem(LEAD_STORE_KEY, JSON.stringify(lead)); }
+  catch (e) { /* storage unavailable; lead capture still works */ }
+}
+
 /* Export for node tests */
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { sortItems, staggerDates, extractGaps, buildItem, progressStats, exportCsv, exportMarkdown, addDaysISO, todayISO, CATEGORY_ORDER, PRIORITY_RANK, CALC_KEY, PLAN_KEY };
+  module.exports = { sortItems, staggerDates, extractGaps, buildItem, progressStats, exportCsv, exportMarkdown, addDaysISO, todayISO, CATEGORY_ORDER, PRIORITY_RANK, CALC_KEY, PLAN_KEY, leadEndpoint, isValidEmail, buildLeadPayload, REPORT_INBOX, LEAD_STORE_KEY };
 }
 
 /* ---------------- Browser app ---------------- */
@@ -193,6 +245,52 @@ function init() {
   document.getElementById("filterCat").addEventListener("change", renderCriteriaList);
   document.getElementById("filterPri").addEventListener("change", renderCriteriaList);
   document.getElementById("filterText").addEventListener("input", renderCriteriaList);
+
+  const leadCapture = document.getElementById("leadCapture");
+  if (!REPORT_INBOX) {
+    leadCapture.hidden = true;
+  } else {
+    const savedLead = loadLead();
+    if (savedLead) {
+      if (savedLead.email) document.getElementById("leadEmail").value = savedLead.email;
+      if (savedLead.company) document.getElementById("leadCompany").value = savedLead.company;
+    }
+    document.getElementById("leadForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const emailEl = document.getElementById("leadEmail");
+      const companyEl = document.getElementById("leadCompany");
+      const statusEl = document.getElementById("leadStatus");
+      const submitBtn = document.getElementById("leadSubmit");
+      const visitorEmail = emailEl.value.trim();
+      const company = companyEl.value.trim();
+      if (!isValidEmail(visitorEmail)) {
+        statusEl.textContent = "Enter a valid work email address.";
+        emailEl.focus();
+        return;
+      }
+      if (PLAN.length === 0) {
+        statusEl.textContent = "Your plan is empty. Add criteria above, then send it.";
+        return;
+      }
+      submitBtn.disabled = true;
+      statusEl.textContent = "Sending your plan...";
+      const md = exportMarkdown(PLAN, BY_ID);
+      try {
+        const res = await fetch(leadEndpoint(REPORT_INBOX), {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify(buildLeadPayload(company, visitorEmail, PLAN, BY_ID, md))
+        });
+        if (!res.ok) throw new Error("lead post failed: " + res.status);
+        saveLead({ email: visitorEmail, company: company });
+        statusEl.textContent = "Sent. Watch your inbox: we will reply with your plan and next steps.";
+      } catch (err) {
+        statusEl.textContent = "Could not send right now. Export your plan above and try again later.";
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  }
 }
 
 function loadPlan() {
