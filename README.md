@@ -43,8 +43,6 @@ At the top of the pure-logic section in `app.js`:
 const REPORT_INBOX = "n.harvard@aitechpros.ai";
 ```
 
-When set, a "Get your plan reviewed" form appears under the remediation plan. The visitor enters their work email (and optional company); their plan is posted to FormSubmit (`https://formsubmit.co/ajax/<inbox>`), which emails the full plan plus lead details (company, email, item counts, open critical items) to the inbox. The visitor's email and company are remembered in localStorage (`soc2remedlead`) so returning visitors do not retype them. Set the constant to `""` to hide the form entirely.
+When set, a "Get your plan reviewed" form appears under the remediation plan. The visitor enters their work email (and optional company); their full plan downloads immediately, and their mail app opens with a pre-addressed review request to the inbox carrying a plan summary (company, email, item counts, open critical items). The visitor hits Send in their own mail app, so the lead arrives from their real address with no backend service involved. The visitor's email and company are remembered in localStorage (`soc2remedlead`) so returning visitors do not retype them. Set the constant to `""` to hide the form entirely.
 
-One-time setup: the first submission triggers a FormSubmit activation email to the inbox. Click the activation link once; submissions arrive automatically after that.
-
-Privacy copy on the page states the plan is sent to AI Tech Pros for follow-up and that the address is never sold.
+Privacy copy on the page states the review request goes to AI Tech Pros for follow-up and that the address is never sold.
