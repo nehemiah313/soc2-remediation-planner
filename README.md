@@ -34,3 +34,17 @@ Readiness aid only. Not an audit, attestation, CPA opinion, or legal advice.
 ## License
 
 MIT. See LICENSE.
+
+## Lead capture
+
+At the top of the pure-logic section in `app.js`:
+
+```js
+const REPORT_INBOX = "n.harvard@aitechpros.ai";
+```
+
+When set, a "Get your plan reviewed" form appears under the remediation plan. The visitor enters their work email (and optional company); their plan is posted to FormSubmit (`https://formsubmit.co/ajax/<inbox>`), which emails the full plan plus lead details (company, email, item counts, open critical items) to the inbox. The visitor's email and company are remembered in localStorage (`soc2remedlead`) so returning visitors do not retype them. Set the constant to `""` to hide the form entirely.
+
+One-time setup: the first submission triggers a FormSubmit activation email to the inbox. Click the activation link once; submissions arrive automatically after that.
+
+Privacy copy on the page states the plan is sent to AI Tech Pros for follow-up and that the address is never sold.
