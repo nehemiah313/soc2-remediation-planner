@@ -154,44 +154,60 @@ function exportMarkdown(items, criteriaById) {
   return lines.join("\n");
 }
 
-/* ---------------- Lead capture ----------------
- * Set REPORT_INBOX to the inbox that receives emailed plans. When set, a
- * "Get your plan reviewed" form appears: the visitor enters their work email
- * and their plan is posted to FormSubmit, which emails the full plan plus
- * lead details to REPORT_INBOX. Leave "" to hide the form.
- *
- * One-time setup: the first submission triggers a FormSubmit activation
- * email to REPORT_INBOX. The inbox owner must click the activation link
- * once; after that, submissions arrive automatically.
+/* ---------------- Lead capture (no backend) ----------------
+ * Set REPORT_INBOX to the inbox that receives review requests. When set, a
+ * "Get your plan reviewed" form appears: the visitor enters their work email,
+ * their full Markdown plan downloads immediately, and their mail app opens
+ * with a pre-addressed review request carrying a plan summary. They hit
+ * Send; the lead arrives from their own address. Leave "" to hide the form.
  */
 const REPORT_INBOX = "n.harvard@aitechpros.ai";
 const LEAD_STORE_KEY = "soc2remedlead";
 
-function leadEndpoint(inbox) {
-  return "https://formsubmit.co/ajax/" + encodeURIComponent(inbox);
+function buildLeadSubject(company) {
+  return "SOC 2 Remediation Plan review request" + (company ? " - " + company : "");
+}
+
+function openCriticalItems(items, criteriaById) {
+  return items.filter((i) => {
+    const c = i.criterionId ? criteriaById[i.criterionId] : null;
+    return c && c.priority === "critical" && i.status !== "Done";
+  });
+}
+
+/* Compact summary for the review-request email body. Pure: safe to unit test. */
+function buildLeadBody(visitorEmail, company, items, criteriaById) {
+  const stats = progressStats(items);
+  const critical = openCriticalItems(items, criteriaById);
+  const lines = [
+    "SOC 2 Remediation Plan review request",
+    "",
+    "Visitor email: " + visitorEmail,
+    "Company: " + (company || "(not given)"),
+    "Plan items: " + stats.total + " (done: " + stats.done +
+      ", open critical: " + critical.length + ")",
+    ""
+  ];
+  const top = critical.slice(0, 8);
+  if (top.length) {
+    lines.push("Top open critical items:");
+    top.forEach((i) => {
+      const c = criteriaById[i.criterionId];
+      lines.push("- " + i.criterionId + ": " + (c ? c.title : i.title || ""));
+    });
+    lines.push("");
+  }
+  lines.push("The visitor downloaded their full plan from the SOC 2 Remediation Planner.");
+  return lines.join("\n");
+}
+
+function leadMailto(inbox, subject, body) {
+  return "mailto:" + inbox + "?subject=" + encodeURIComponent(subject) +
+    "&body=" + encodeURIComponent(body);
 }
 
 function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
-/* Builds the JSON body posted to the lead endpoint. Pure: safe to unit test. */
-function buildLeadPayload(company, visitorEmail, items, criteriaById, report) {
-  const stats = progressStats(items);
-  const critical = items.filter((i) => {
-    const c = i.criterionId ? criteriaById[i.criterionId] : null;
-    return c && c.priority === "critical" && i.status !== "Done";
-  }).length;
-  return {
-    _subject: "SOC 2 Remediation Plan lead" + (company ? " - " + company : ""),
-    _template: "table",
-    name: company || "(no company given)",
-    email: visitorEmail,
-    plan_items: String(stats.total),
-    items_done: String(stats.done),
-    open_critical_items: String(critical),
-    message: report
-  };
 }
 
 function loadLead() {
@@ -208,7 +224,7 @@ function saveLead(lead) {
 
 /* Export for node tests */
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { sortItems, staggerDates, extractGaps, buildItem, progressStats, exportCsv, exportMarkdown, addDaysISO, todayISO, CATEGORY_ORDER, PRIORITY_RANK, CALC_KEY, PLAN_KEY, leadEndpoint, isValidEmail, buildLeadPayload, REPORT_INBOX, LEAD_STORE_KEY };
+  module.exports = { sortItems, staggerDates, extractGaps, buildItem, progressStats, exportCsv, exportMarkdown, addDaysISO, todayISO, CATEGORY_ORDER, PRIORITY_RANK, CALC_KEY, PLAN_KEY, buildLeadSubject, openCriticalItems, buildLeadBody, leadMailto, isValidEmail, REPORT_INBOX, LEAD_STORE_KEY };
 }
 
 /* ---------------- Browser app ---------------- */
@@ -255,12 +271,11 @@ function init() {
       if (savedLead.email) document.getElementById("leadEmail").value = savedLead.email;
       if (savedLead.company) document.getElementById("leadCompany").value = savedLead.company;
     }
-    document.getElementById("leadForm").addEventListener("submit", async (e) => {
+    document.getElementById("leadForm").addEventListener("submit", (e) => {
       e.preventDefault();
       const emailEl = document.getElementById("leadEmail");
       const companyEl = document.getElementById("leadCompany");
       const statusEl = document.getElementById("leadStatus");
-      const submitBtn = document.getElementById("leadSubmit");
       const visitorEmail = emailEl.value.trim();
       const company = companyEl.value.trim();
       if (!isValidEmail(visitorEmail)) {
@@ -269,26 +284,14 @@ function init() {
         return;
       }
       if (PLAN.length === 0) {
-        statusEl.textContent = "Your plan is empty. Add criteria above, then send it.";
+        statusEl.textContent = "Your plan is empty. Add criteria above first.";
         return;
       }
-      submitBtn.disabled = true;
-      statusEl.textContent = "Sending your plan...";
-      const md = exportMarkdown(PLAN, BY_ID);
-      try {
-        const res = await fetch(leadEndpoint(REPORT_INBOX), {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Accept": "application/json" },
-          body: JSON.stringify(buildLeadPayload(company, visitorEmail, PLAN, BY_ID, md))
-        });
-        if (!res.ok) throw new Error("lead post failed: " + res.status);
-        saveLead({ email: visitorEmail, company: company });
-        statusEl.textContent = "Sent. Watch your inbox: we will reply with your plan and next steps.";
-      } catch (err) {
-        statusEl.textContent = "Could not send right now. Export your plan above and try again later.";
-      } finally {
-        submitBtn.disabled = false;
-      }
+      download("soc2-remediation-plan.md", exportMarkdown(PLAN, BY_ID), "text/markdown");
+      saveLead({ email: visitorEmail, company: company });
+      window.location.href = leadMailto(REPORT_INBOX, buildLeadSubject(company),
+        buildLeadBody(visitorEmail, company, PLAN, BY_ID));
+      statusEl.textContent = "Plan downloaded. An email draft just opened: hit Send and we will reply with a read on your biggest gaps. If no draft opened, email your downloaded plan to " + REPORT_INBOX + ".";
     });
   }
 }
