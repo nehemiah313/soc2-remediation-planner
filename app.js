@@ -154,15 +154,33 @@ function exportMarkdown(items, criteriaById) {
   return lines.join("\n");
 }
 
-/* ---------------- Lead capture (no backend) ----------------
+/* ---------------- Lead capture (silent backend) ----------------
  * Set REPORT_INBOX to the inbox that receives review requests. When set, a
  * "Get your plan reviewed" form appears: the visitor enters their work email,
- * their full Markdown plan downloads immediately, and their mail app opens
- * with a pre-addressed review request carrying a plan summary. They hit
- * Send; the lead arrives from their own address. Leave "" to hide the form.
+ * their full Markdown plan downloads immediately, and their email, plan
+ * summary, and top critical items are silently POSTed to LEAD_CAPTURE_URL
+ * (a backend failure never blocks the download). Leave "" to hide the form.
  */
 const REPORT_INBOX = "n.harvard@aitechpros.ai";
 const LEAD_STORE_KEY = "soc2remedlead";
+const LEAD_CAPTURE_URL = "https://leads.aitechpros.ai/capture";
+
+/* Silent lead capture: POSTs the visitor's email, plan summary, and top
+ * critical items to the lead-capture endpoint. Fire-and-forget: a backend
+ * failure must never block the visitor's plan download. */
+function captureLead(payload) {
+  try {
+    fetch(LEAD_CAPTURE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(Object.assign({
+        page_url: (typeof location !== "undefined" && location.href) || "",
+        hp: ""
+      }, payload)),
+      keepalive: true
+    }).catch(function () { /* never block the download */ });
+  } catch (e) { /* never block the download */ }
+}
 
 function buildLeadSubject(company) {
   return "SOC 2 Remediation Plan review request" + (company ? " - " + company : "");
@@ -289,9 +307,22 @@ function init() {
       }
       download("soc2-remediation-plan.md", exportMarkdown(PLAN, BY_ID), "text/markdown");
       saveLead({ email: visitorEmail, company: company });
-      window.location.href = leadMailto(REPORT_INBOX, buildLeadSubject(company),
-        buildLeadBody(visitorEmail, company, PLAN, BY_ID));
-      statusEl.textContent = "Plan downloaded. An email draft just opened: hit Send and we will reply with a read on your biggest gaps. If no draft opened, email your downloaded plan to " + REPORT_INBOX + ".";
+      const stats = progressStats(PLAN);
+      const critical = openCriticalItems(PLAN, BY_ID);
+      captureLead({
+        email: visitorEmail,
+        tool: "soc2-remediation-planner",
+        score: "Plan items: " + stats.total + " (done: " + stats.done +
+          ", open critical: " + critical.length + ")",
+        summary: {
+          company: company,
+          topGaps: critical.slice(0, 8).map((i) => {
+            const c = BY_ID[i.criterionId];
+            return i.criterionId + ": " + (c ? c.title : i.title || "");
+          })
+        }
+      });
+      statusEl.textContent = "Plan downloaded. Check your inbox: your results summary and next steps are on the way.";
     });
   }
 }
