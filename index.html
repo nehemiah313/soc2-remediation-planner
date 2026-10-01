@@ -30,12 +30,12 @@
     <h2>2. Add criteria to the plan</h2>
     <div class="row filters">
       <label>Category
-        <select id="filterCat">
+        <select id="filterCat" aria-label="Filter by category">
           <option value="">All categories</option>
         </select>
       </label>
       <label>Priority
-        <select id="filterPri">
+        <select id="filterPri" aria-label="Filter by priority">
           <option value="">All priorities</option>
           <option value="critical">Critical</option>
           <option value="high">High</option>
@@ -43,7 +43,7 @@
         </select>
       </label>
       <label class="grow">Search
-        <input id="filterText" type="search" placeholder="e.g. access, vendor, privacy">
+        <input id="filterText" type="search" placeholder="e.g. access, vendor, privacy" aria-label="Search criteria">
       </label>
     </div>
     <div id="criteriaList" class="criteria-list"></div>
@@ -65,6 +65,7 @@
     <div id="leadCapture" class="lead-capture">
       <h3>Get your plan reviewed</h3>
       <p class="hint">Enter your work email below. Your full plan downloads immediately, and your plan summary is sent to our team so we can email you a read on your biggest gaps and what a fixed-price readiness sprint would cover. No spam, ever. We never sell your information. Unsubscribe anytime.</p>
+      <p class="hint">Enter your work email to receive your results by email, plus occasional follow-ups. Unsubscribe anytime. See our <a href="https://aitechpros.ai/privacy/">Privacy Policy</a>.</p>
       <form id="leadForm" class="lead-form" novalidate>
         <label class="sr-only" for="leadEmail">Work email</label>
         <input type="email" id="leadEmail" name="email" placeholder="you@company.com" required autocomplete="email">
@@ -81,6 +82,8 @@
   <div class="wrap">
     <p>Built by <strong>AI Tech Pros</strong>. Dataset: <a href="https://github.com/nehemiah313/tsc-dataset">nehemiah313/tsc-dataset</a></p>
     <p class="disclaimer">Readiness aid only. Not an audit, attestation, CPA opinion, or legal advice.</p>
+    <p>&copy; 2026 AI Tech Pros, Inc. All rights reserved. &middot; <a href="mailto:n.harvard@aitechpros.ai">n.harvard@aitechpros.ai</a> &middot; <a href="https://aitechpros.ai/privacy/">Privacy Policy</a> &middot; <a href="https://aitechpros.ai/terms/">Terms of Use</a></p>
+    <p class="storage-note">Your entries are saved only in this browser (local storage) and are never sent to us.</p>
   </div>
 </footer>
 
